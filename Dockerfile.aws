@@ -1,0 +1,14 @@
+FROM python:3.6 AS builder
+
+RUN python -m pip install protobuf==3.12.2 grpcio==1.38.1 
+
+WORKDIR app
+
+COPY ./ .
+
+COPY server.crt .
+COPY server.key .
+
+CMD python route_guide_server.py --secure
+
+EXPOSE 50051
