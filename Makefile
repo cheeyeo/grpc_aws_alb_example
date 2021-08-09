@@ -21,4 +21,4 @@ cert:
 	openssl req -nodes -new -x509 -sha256 -days 1825 -config certificate.conf -extensions 'req_ext' -key server.key -out server.crt
 
 upload-cert:
-	aws --profile devs acm import-certificate --certificate fileb://server.crt --private-key fileb://server.key
+	aws --profile $(AWS_PROFILE) acm import-certificate --certificate fileb://server.crt --private-key fileb://server.key

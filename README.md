@@ -46,9 +46,12 @@ To provision:
 ```
 terraform -chdir=terraform init
 
-terraform -chdir=terraform plan -var-file=config.tfvars myplan
+terraform -chdir=terraform plan -var-file=config.tfvars -out myplan
+
+terraform -chdir=terraform apply myplan
 
 terraform -chdir=terraform output
+
 ```
 
 Get the `load_balancer` output and export it as `HOST` env var which will be read by the client.
@@ -84,7 +87,7 @@ longitude: -740371136
 
 To remove all AWS resources:
 ```
-terraform -chdir=terraform apply -var-file=config.tfvars
+terraform -chdir=terraform destroy -var-file=config.tfvars
 
 ```
 
@@ -125,6 +128,10 @@ openssl x509 -in server.crt --text
 [Article on GRPC over REST](https://towardsdatascience.com/reasons-to-choose-grpc-over-rest-and-how-to-adopt-it-into-your-python-apis-197ac28e22b4)
 
 [ALB example using Terraform](https://github.com/terraform-aws-modules/terraform-aws-alb/blob/v6.3.0/examples/complete-alb/main.tf)
+
+[Example of ECS Fargate service on private subnet with ALB](https://engineering.finleap.com/posts/2020-02-20-ecs-fargate-terraform/)
+
+[Example code for above](https://github.com/finleap/tf-ecs-fargate-tmpl/)
 
 
 ### Replace listeners for elb using cli
