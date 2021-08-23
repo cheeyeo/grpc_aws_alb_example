@@ -1,6 +1,6 @@
 ### GRPC on AWS Application Load Balancer
 
-This is an example GRPC application that runs as an ECS service on a custom ECS cluster with traffic routed via the internet through an Application Load Balancer. 
+This is an example GRPC application that runs as an ECS service on a custom ECS cluster with traffic routed via the internet through an Application Load Balancer.
 
 This is my attempt at re-creating the demo [from the following blog post](https://aws.amazon.com/blogs/aws/new-application-load-balancer-support-for-end-to-end-http-2-and-grpc/)
 
@@ -92,6 +92,17 @@ terraform -chdir=terraform destroy -var-file=config.tfvars
 ```
 
 ### gRPC TLS Notes
+
+* ALB has end-to-end support for HTTP/2 TLS so there's no need to enable HTTPS as protocol in the Target Group between the ALB and containers
+	
+	In this example we are using full HTTPS connections from ALB > gRPC service and back. The blog post shows a version where the protocol from ALB > gRPC is HTTP only, even though it uses HTTPS as a listener.
+
+	If one tries to establish a client connection as per the blog post, it will fail with "SSL:Verify" errors.
+
+	I suspect the reason is the blog post also uses a custom domain registered with Route53 and the same domain is in the certificates registered via the certificate manager.
+
+	So perhaps thats why the client works without specifying any root certificates for verification ...
+
 
 * To use a self signed cert on ALB, we need to sign the cert with `subjectAltName` set to both `localhost` and `*.us-east-1.elb.amazonaws.com`. This can be adjusted to suit...
 

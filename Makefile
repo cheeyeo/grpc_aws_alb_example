@@ -1,7 +1,7 @@
-.PHONY: build-protobufs build-docker cert upload-cert
+.PHONY: build-protobufs build-docker cert upload-cert run-client
 
 build-protobufs:
-	python -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. ./route_guide.proto
+	python -m grpc_tools.protoc -I . --python_out=route_guide --grpc_python_out=route_guide ./route_guide.proto
 
 # Builds and push image to ECR
 build-docker:
@@ -22,3 +22,7 @@ cert:
 
 upload-cert:
 	aws --profile $(AWS_PROFILE) acm import-certificate --certificate fileb://server.crt --private-key fileb://server.key
+
+
+run-client:
+	PYTHONPATH="${PWD}/route_guide" python route_guide_client.py --secure

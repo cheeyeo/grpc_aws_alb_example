@@ -14,7 +14,8 @@
 """Common resources used in the gRPC route guide example."""
 
 import json
-
+import os
+from pathlib import Path
 import route_guide_pb2
 
 
@@ -26,7 +27,9 @@ def read_route_guide_database():
       route_guide_pb2.Features.
     """
     feature_list = []
-    with open("route_guide_db.json") as route_guide_db_file:
+    db_file = os.path.join(Path(__file__).resolve().parent, "route_guide_db.json")
+
+    with open(db_file) as route_guide_db_file:
         for item in json.load(route_guide_db_file):
             feature = route_guide_pb2.Feature(
                 name=item["name"],

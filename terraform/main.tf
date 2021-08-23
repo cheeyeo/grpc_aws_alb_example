@@ -109,13 +109,13 @@ resource "aws_ecs_task_definition" "grpc_service" {
   memory                   = 512
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 
-
   container_definitions = jsonencode([
     {
 
       "essential" : true,
       "image" : "${var.container_image}",
       "name" : "${var.grpc_service_name}",
+      "command" : ["--secure"],
       "portMappings" : [
         {
           "containerPort" : 50051,
@@ -152,6 +152,7 @@ module "alb" {
   target_groups = [
     {
       backend_protocol = "HTTPS"
+      protocol_version = "gRPC"
       backend_port     = 50051
       target_type      = "ip"
       health_check = {
@@ -165,7 +166,6 @@ module "alb" {
         protocol            = "HTTPS"
         matcher             = "12"
       }
-      protocol_version = "gRPC"
     }
   ]
 

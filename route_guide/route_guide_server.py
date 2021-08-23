@@ -117,6 +117,9 @@ def serve(secure=False):
     route_guide_pb2_grpc.add_RouteGuideServicer_to_server(
         RouteGuideServicer(), server)
 
+
+    # NOTE: On ALB grpc its end-to-end encrypted so we should be able to leave out TLS certs
+    # however the client will fail with SSL::Verify failed errors hence we are leaving it in...
     if secure:
         with open("server.key", "rb") as f:
             server_key = f.read()
