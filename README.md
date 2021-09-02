@@ -4,11 +4,22 @@ This is an example GRPC application that runs as an ECS service on a custom ECS 
 
 This is my attempt at re-creating the demo [from the following blog post](https://aws.amazon.com/blogs/aws/new-application-load-balancer-support-for-end-to-end-http-2-and-grpc/)
 
+
+The difference with the blog post is that I tried to implement end-to-end TLS as follows:
+
+* ALB terminates TLS from ALB > Service
+
+	We set the target group backend protocol as `HTTPS` and set the grpc service to run with `ssl_server_credentials` using same certificates stored in ACM
+
+* gRPC client to service uses `secure_channel` to invoke the service using the same certificates
+
+
+
 Like the post, I adopted the route guide grpc example [from the official grpc repo](https://github.com/grpc/grpc/tree/master/examples/python/route_guide) and adapted it as follows:
 
 * Added an option to the route_guide_client.py file to allow for secure channel communication. Default is False
 
-* Added an option to the route_guide_server.py to allow for mutual TLS with the client. Default is False.
+* Added an option to the route_guide_server.py to allow for server-side TLS with the client. Default is False.
 
 When running locally, use the Makefile to generate the libs from the protobuf and to generate the certs and build the docker container:
 
@@ -44,14 +55,7 @@ The terraform scripts provision the following resources:
 
 To provision:
 ```
-terraform -chdir=terraform init
-
-terraform -chdir=terraform plan -var-file=config.tfvars -out myplan
-
-terraform -chdir=terraform apply myplan
-
-terraform -chdir=terraform output
-
+make setup
 ```
 
 Get the `load_balancer` output and export it as `HOST` env var which will be read by the client.
@@ -87,30 +91,26 @@ longitude: -740371136
 
 To remove all AWS resources:
 ```
-terraform -chdir=terraform destroy -var-file=config.tfvars
-
+make teardown
 ```
 
 ### gRPC TLS Notes
 
-* ALB has end-to-end support for HTTP/2 TLS so there's no need to enable HTTPS as protocol in the Target Group between the ALB and containers
-	
-	In this example we are using full HTTPS connections from ALB > gRPC service and back. The blog post shows a version where the protocol from ALB > gRPC is HTTP only, even though it uses HTTPS as a listener.
+* ALB uses TLS cert to terminate front-end connection, and decrypts requests from clients before sending it to targets
 
-	If one tries to establish a client connection as per the blog post, it will fail with "SSL:Verify" errors.
+	ALB operates at Application Layer
 
-	I suspect the reason is the blog post also uses a custom domain registered with Route53 and the same domain is in the certificates registered via the certificate manager.
 
-	So perhaps thats why the client works without specifying any root certificates for verification ...
+* TLS terminates at ALB and connection between ALB and backend left unencrypted
 
 
 * To use a self signed cert on ALB, we need to sign the cert with `subjectAltName` set to both `localhost` and `*.us-east-1.elb.amazonaws.com`. This can be adjusted to suit...
 
-	Note that this is by no means a secure way of running a production service. The server keys are unencrypted and really should use a KMS service to provision the certificates dynamically at run time...
+	Note that this is by no means a secure way of running a production service. The private keys should be encrypted using secrets manager and loaded into the service at runtime...
 
 * Also the certificate should be issued to a domain, and we can create an Route 53 Alias record that points to the DNS A record of the ALB ...
 
-* If running with mutual client / server TLS on, we need to enable HTTPS for healthcheck else ALB fails...
+* If running with server-side TLS on, we need to enable HTTPS for healthcheck else ALB fails...
 
 
 * To inspect the generated TLS certs we can use openssl:

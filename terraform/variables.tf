@@ -83,3 +83,9 @@ variable "container_image" {
   type        = string
   default     = ""
 }
+
+variable "m1l0_keyname" {
+  description = "Name of M1L0 SSH key"
+  type        = string
+  default     = "M1L0Key"
+}

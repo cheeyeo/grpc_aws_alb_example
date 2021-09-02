@@ -1,4 +1,4 @@
-.PHONY: build-protobufs build-docker cert upload-cert run-client
+.PHONY: build-protobufs build-docker cert upload-cert run-client setup teardown
 
 build-protobufs:
 	python -m grpc_tools.protoc -I . --python_out=route_guide --grpc_python_out=route_guide ./route_guide.proto
@@ -26,3 +26,13 @@ upload-cert:
 
 run-client:
 	PYTHONPATH="${PWD}/route_guide" python route_guide_client.py --secure
+
+setup:
+	terraform -chdir=terraform init
+	terraform -chdir=terraform fmt
+	terraform -chdir=terraform validate
+	terraform -chdir=terraform plan -var-file=config.tfvars -out myplan
+	terraform -chdir=terraform apply myplan
+
+teardown:
+	terraform -chdir=terraform destroy -var-file=config.tfvars

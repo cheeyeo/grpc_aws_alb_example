@@ -1,0 +1,146 @@
+# create Application Load Balancer
+module "alb" {
+  source  = "terraform-aws-modules/alb/aws"
+  version = "~> 6.0"
+
+  name = "route-guide"
+
+  load_balancer_type = "application"
+
+  vpc_id          = module.vpc.vpc_id
+  subnets         = module.vpc.public_subnets
+  security_groups = [module.vpc.default_security_group_id, module.grpc_sg.security_group_id]
+
+  target_groups = [
+    {
+      backend_protocol = "HTTPS"
+      protocol_version = "gRPC"
+      backend_port     = 50051
+      target_type      = "ip"
+      health_check = {
+        enable              = true
+        interval            = 30
+        path                = "/"
+        port                = "traffic-port"
+        healthy_threshold   = 3
+        unhealthy_threshold = 3
+        timeout             = 5
+        protocol            = "HTTPS"
+        matcher             = "12"
+      }
+    }
+  ]
+
+  https_listeners = [
+    {
+      port               = 50051
+      protocol           = "HTTPS"
+      certificate_arn    = aws_acm_certificate.self_signed.arn
+      target_group_index = 0
+    }
+  ]
+}
+
+
+
+
+
+resource "aws_ecs_task_definition" "grpc_service" {
+  family                   = var.grpc_service_name
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+
+      "essential" : true,
+      "image" : "${var.container_image}",
+      "name" : "${var.grpc_service_name}",
+      "command" : ["--secure"],
+      "portMappings" : [
+        {
+          "containerPort" : 50051,
+          "hostPort" : 50051,
+          "protocol" : "tcp"
+        }
+      ],
+      "logConfiguration" : {
+        "logDriver" : "awslogs",
+        "options" : {
+          "awslogs-region" : "${var.aws_region}",
+          "awslogs-group" : aws_cloudwatch_log_group.main.name,
+          "awslogs-stream-prefix" : "ecs"
+        }
+      }
+    }
+  ])
+}
+
+
+resource "aws_ecs_service" "grpc_service" {
+  name            = var.grpc_service_name
+  cluster         = module.ecs.this_ecs_cluster_name
+  task_definition = aws_ecs_task_definition.grpc_service.arn
+
+  desired_count = 2
+
+  launch_type = "FARGATE"
+
+  network_configuration {
+    security_groups  = [module.vpc.default_security_group_id]
+    subnets          = module.vpc.private_subnets
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = module.alb.target_group_arns[0]
+    container_name   = var.grpc_service_name
+    container_port   = 50051
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition, desired_count]
+  }
+}
+
+resource "aws_ecs_task_definition" "grpc_service" {
+  family                   = var.grpc_service_name
+  network_mode             = "bridge"
+  requires_compatibilities = ["EC2"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+
+      "essential" : true,
+      "image" : "${var.container_image}",
+      "name" : "${var.grpc_service_name}",
+      "command" : ["--secure"],
+      "portMappings" : [
+        {
+          "containerPort" : 50051,
+          "hostPort" : 50051,
+          "protocol" : "tcp"
+        }
+      ],
+      "logConfiguration" : {
+        "logDriver" : "awslogs",
+        "options" : {
+          "awslogs-region" : "${var.aws_region}",
+          "awslogs-group" : aws_cloudwatch_log_group.main.name,
+          "awslogs-stream-prefix" : "ecs"
+        }
+      }
+    }
+  ])
+
+   placement_constraints {
+    type       = "memberOf"
+    expression = "ec2InstanceId=={}"
+  }
+}

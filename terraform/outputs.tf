@@ -18,7 +18,7 @@ output "cluster_name" {
   value       = module.ecs.this_ecs_cluster_name
 }
 
-output "load_balancer" {
-  description = "DNS A record of load balancer"
-  value       = module.alb.lb_dns_name
-}
+#output "load_balancer" {
+#  description = "DNS A record of load balancer"
+#  value       = module.alb.lb_dns_name
+#}
